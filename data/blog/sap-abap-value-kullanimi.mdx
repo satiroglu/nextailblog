@@ -1,0 +1,276 @@
+---
+title: 'ABAP VALUE Operatörünün Kullanımı'
+date: 2022-08-07T15:32:14Z
+lastmod: '2021-02-01'
+tags: ['SAP', 'ABAP', 'VALUE']
+draft: false
+summary: 'An overview of the new features released in v1 - code block copy, multiple authors, frontmatter layout and more'
+bibliography: references-data.bib
+canonicalUrl: https://tailwind-nextjs-starter-blog.vercel.app/blog/new-features-in-v1/
+---
+
+## VALUE Tanımlama
+
+VALUE operatörü ile; Internal table (itab) içerisindeki veriler okunabilir, bir wa(Work Area) ya da structure’a veri girilebilir(sabit veri vermek için kullanılabilir), itab oluşturmada ve okumada kullanılabilir.
+
+```abap
+report zae_value.
+
+" structure için types tanımı oluşturulur
+types: begin of ty_value,
+         name type string,
+         role type string,
+       end of ty_value.
+
+" eğer inline olarak structure oluşturacaksak aşğıdaki gibi
+" data kullanımı ile value kullanılarak değer atanır.
+data(wa) = VALUE ty_value( name = 'Ahmet' role ='Developer' ).
+
+" wa içeriğini görmek için aşağıdaki class kullanılır, sadece demo için
+cl_demo_output=>display( wa ).
+```
+
+Yukarıdaki örnekte types tanımı hazırladık. Ardından wa tanımını inline olarak yaptık ve value ile içerisine değer girdik. VALUE komutundan sonra yazdığımız ty_value bizim için wa structure’ının yapısının ty_value gibi olması gerektiğini belirttik. Parantez içerisinde ise type olarak tanımadığımız name ve role alanları için veri girdik. cl_demo_output class’ı ile de debuga girmeden direkt ekranda wa içeriğini görmeyi sağladık.
+
+Yukarıdaki örnekte inline olarak wa tanımı yaptığımız için aslında VALUE’dan sonra bu wa tipinin nasıl olması gerektiğini belirttik. Eğer biz programımızda DATA tanımlamaları yaptığımız yerde wa tanımını yapsaydık kullanımı biraz daha farklı olacaktı.
+
+Aşağıdaki kodu inceleyelim ve üzerine açıklamalar yapalım.
+
+```abap
+report zae_value.
+
+types: begin of ty_value,
+         name type string,
+         role type string,
+       end of ty_value.
+
+data: wa type ty_value.
+wa = value #( name = 'Enes' role = 'Analist' ).
+cl_demo_output=>display( wa ).
+```
+
+Bu kod bloğunda wa tanımı daha önceden yapılmış ve tipinin ty_value olacağı belirlenmiş. VALUE ile wa içerisinde değer atacağımız durumlarda VALUE kelimesinden sonra wa tipini belirtmek yerine direkt # ifadesini yazabiliriz. Bu şu anlama geliyor; bu wa tanımı daha önceden tipi belirtilerek yapılmıştır biz sadece value ile içine değer atacağız.
+
+Dikkat ettiyseniz wa = value #… şeklinde başladı kodumuz. direkt olarak wa = şeklinde başlamasının sebebi ise söylediğimiz gibi, bir önceki satırda wa tanımının yapılmasından dolayıdır.
+
+## VALUE ile BASE kullanımı
+
+VALUE ile bir itab içerisindeki verileri diğer itab içerisine atabiliyoruz. bir itab tipini yeni oluşturulan itab’a tanımlayabiliyoruz. Bunu yapabilmek için BASE komutunu kullanıyoruz.
+
+```abap
+report zae_value.
+
+types: begin of ty_value,
+         name type string,
+         role type string,
+       end of ty_value.
+
+data: wa type ty_value.
+data(wa2) = value #( base wa name = 'Enes' role = 'Analist' ).
+cl_demo_output=>display( wa2 ).
+```
+
+- İçerisinde name ve role bilgisini tutacak olan ty_value adında bir tip belirledik.
+- wa adındaki structure’ımın (aynı zamanda work area olarak da geçer) tipini ty_value olacak şekilde tanımladık.
+- inline olarak wa2 tanımı yaptık. value # şeklinde kullanımına başladık fakat parantez içinde base wa şeklinde bir ifade kullandık. Bu ifadenin anlamı; wa2’yi tanımla ama tipi wa’nın tipi ile aynı olsun. Program çalıştığında value # ifadesindeki # yerine wa’nın tipi olan ty_value bilgisini getirir ve o şekilde çalıştırır.
+
+## VALUE ile Çoktu Satır Ekleme
+
+VALUE kullanılarak bir itab içerisine, itab’ın tipi doğrultusunda 1’den fazla kayıt eklenebilir.
+
+```abap
+report zae_value.
+
+types: begin of ty_value,
+         name type string,
+         role type string,
+       end of ty_value.
+
+" çok tercih edilen bir yöntem değil.
+types: wa type table of ty_value with empty key.
+data(itab) = value wa( ( name = 'Enes'    role = 'Analist')
+                       ( name = 'Ahmet'   role = 'Developer')
+                       ( name = 'Mehmet'  role = 'Müdür')
+                       ( name = 'Veli'    role = 'Çaycı')
+                      ).
+cl_demo_output=>display( itab ).
+```
+
+Value ile itab içerisinde veri aktarırken en çok kullanılan yöntem aşağıdaki gibidir. Her zaman bu yöntem kullanılmalıdır.
+
+```abap
+report zae_value.
+
+types: begin of ty_value,
+         name type string,
+         role type string,
+       end of ty_value.
+
+data: itab type table of ty_value.
+
+itab = value #( ( name = 'Enes'    role = 'Analist')
+                ( name = 'Ahmet'   role = 'Developer')
+                ( name = 'Mehmet'  role = 'Müdür')
+                ( name = 'Veli'    role = 'Çaycı')
+               ).
+cl_demo_output=>display( itab ).
+```
+
+## APPEND VALUE Kullanımı
+
+APPEND VALUE kullanılarak bir itab içerisine veri eklenebilir.
+
+### itab’a tek satır ekleme
+
+```abap
+report zae_value.
+
+types: begin of ty_value,
+         name type string,
+         role type string,
+       end of ty_value.
+
+data: itab type table of ty_value.
+
+itab = value #( ( name = 'Enes'    role = 'Analist')
+                ( name = 'Ahmet'   role = 'Developer')
+                ( name = 'Mehmet'  role = 'Müdür')
+                ( name = 'Veli'    role = 'Çaycı')
+               ).
+
+append value #( name = 'İsim' role = 'Role' ) to itab. " sadece 1 line ekleme işlemi
+
+cl_demo_output=>display( itab ).
+```
+
+### itab’a çoklu satır ekleme
+
+itab’a çoklu satır eklemek için aşağıdaki yapıyı kullanabiliriz.
+
+```abap
+report zae_value.
+
+types: begin of ty_value,
+         name type string,
+         role type string,
+       end of ty_value.
+
+data: itab type table of ty_value.
+
+itab = value #( ( name = 'Enes'    role = 'Analist')
+                ( name = 'Ahmet'   role = 'Developer')
+                ( name = 'Mehmet'  role = 'Müdür')
+                ( name = 'Veli'    role = 'Çaycı')
+               ).
+" çoklu satır itab'a eklenmesi
+ itab = value #( base itab ( name = 'name 1' role = 'rol 1' )
+                           ( name = 'name 2' role = 'rol 2' )
+               ).
+
+cl_demo_output=>display( itab ).
+```
+
+Bir itab içerisine çoklu satır ekleme ihtiyacı duyabileceğimiz gibi, bir itab’dan başka bir itab’a da veri aktarımı yapma ihtiyacı duyabiliriz. Böyle bir durumda aşağıdaki gibi kod yazabiliriz. Kırmızı işaretlenmiş kodlar yukardaki kodlardan farklı göstermektedir.
+
+```abap
+report zae_value.
+
+types: begin of ty_value,
+         name type string,
+         role type string,
+       end of ty_value.
+
+data: itab type table of ty_value.
+
+itab = value #( ( name = 'Enes'    role = 'Analist')
+                ( name = 'Ahmet'   role = 'Developer')
+                ( name = 'Mehmet'  role = 'Müdür')
+                ( name = 'Veli'    role = 'Çaycı')
+               ).
+" çoklu satırları bir itab dan diğer itab a eklenmesi
+ data(itab2) = value #( base itab ( name = 'name 1' role = 'rol 1' )
+                           ( name = 'name 2' role = 'rol 2' )
+               ).
+
+cl_demo_output=>display( itab2 ).
+```
+
+### [ ] ifadesiyle tablo okuma
+
+```abap
+report zae_value.
+
+types: begin of ty_value,
+         name type string,
+         role type string,
+       end of ty_value.
+
+data: itab type table of ty_value.
+
+itab = value #( ( name = 'Enes'    role = 'Analist')
+                ( name = 'Ahmet'   role = 'Developer')
+                ( name = 'Mehmet'  role = 'Müdür')
+                ( name = 'Veli'    role = 'Çaycı')
+               ).
+
+data(wa_read) = itab[ name = 'Enes' ].
+
+cl_demo_output=>display( wa_read ).
+```
+
+Yukarıdaki kodda wa_read içerisine (structure’a) name’i enes olanı okuyup attık. wa_read-name olarak çağırabilir ve kullanabiliriz. ‘Enes’ ifadesini burada büyük küçük harf uyumuna dikkat ederek yazmalıyız. Aksi halde dump hatası verecektir. Eğer biz tabloda (itab) olmayan bir veriyi okuyacak isek okuma işlemi sırasında kodumuz aşağıdaki gibi olmalıdır:
+
+```abap
+data(wa_read) = value #( itab[ name = 'Ali' ] optional ).
+```
+
+Ali isminde bir kayıt yok itab içerisinde. Bu durumda wa_read’in içi boş olarak görüntülenecektir ve dump’a düşmeyecektir. dump’a düşmesini OPTIONAL kelimesi ile engellemiş oluyoruz.
+
+### Default olarak Value ile değer atama
+
+Eğer Ali ifadesini itab içerisinde bulamaz ise ve default olarak bir değer atamak istersek aşağıdaki gibi kodumuzu yazmamız gerekir:
+
+```abap
+report zae_value.
+
+types: begin of ty_value,
+         name type string,
+         role type string,
+       end of ty_value.
+
+data: itab type table of ty_value.
+data: wa_def type ty_value.
+
+itab = value #( ( name = 'Enes'    role = 'Analist')
+                ( name = 'Ahmet'   role = 'Developer')
+                ( name = 'Mehmet'  role = 'Müdür')
+                ( name = 'Veli'    role = 'Çaycı')
+               ).
+
+wa_def = value ty_value( name = 'Adımız' role = 'Rolümüz' ).
+
+data(wa_read) = value #( itab[ name = 'Ali' ] default wa_def ).
+
+cl_demo_output=>display( wa_read ).
+```
+
+Yukarıdaki kodları şöyle açıklayabiliriz;
+
+- wa_def içerisine name ve role alanları için veriler tanımladık.
+- wa_read’i oluşturup içine atamak istediğim değer olarak itab içinde name alanı Ali olan satırı çekmek istedim.
+- wa_read içerisine atılan itab verileri içinde name’i Ali olan bir değer yok ise defauld olarak wa_def içerisindeki verileri wa_read içine aktar dedik.
+- Kodu çalıştırdığınızda Name: Adımız Role: Rolümüz şeklinde bir çıktı alırsınız.
+- wa_read satırında bulunan Ali ismini Enes olarak değiştirip programı çalıştırın. Bu da size kodun nasıl çalıştığını net bir şekilde gösterecektir
+
+## Kaynaklar
+
+Bu yazıyı yazarken faydalandığım kaynaklar aşağıdaki gibidir.
+
+### Video
+
+[https://www.youtube.com/watch?v=1ZiG5yS4yrk](https://www.youtube.com/watch?v=1ZiG5yS4yrk)
+
+### Yazılar
+
+- [https://help.sap.com/doc/abapdocu_750_index_htm/7.50/en-US/abenconstructor_expression_value.htm](https://help.sap.com/doc/abapdocu_750_index_htm/7.50/en-US/abenconstructor_expression_value.htm)
+- [https://blogs.sap.com/2013/05/27/abap-news-for-release-740-constructor-operator-value/](https://blogs.sap.com/2013/05/27/abap-news-for-release-740-constructor-operator-value/)

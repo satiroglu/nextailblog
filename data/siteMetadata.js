@@ -2,7 +2,8 @@ const siteMetadata = {
   title: 'Ahmet Ertürk - Kişisel Blog',
   author: 'Ahmet Ertürk',
   headerTitle: 'Ahmet Ertürk',
-  description: 'Yazılım, teknoloji, finans alanlarında yazılar paylaştığım kişisel blogum.',
+  description:
+    'Hoş geldin. Finans deyimi ardından yazılıma adım atan birisiyim. Websitemde bildiklerimi ve öğrendiklerimi paylaşıyorum.',
   language: 'tr-tr',
   theme: 'system', // system, dark or light
   siteUrl: 'https://nextailblog.vercel.app/',
